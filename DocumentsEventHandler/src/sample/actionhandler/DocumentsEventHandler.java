@@ -7,7 +7,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import org.apache.poi.hssf.usermodel.HSSFDateUtil;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
@@ -36,7 +35,6 @@ import com.filenet.api.property.PropertyFilter;
 import com.filenet.api.util.Id;
 import com.ibm.casemgmt.api.Case;
 import com.ibm.casemgmt.api.CaseType;
-import com.ibm.casemgmt.api.constants.ModificationIntent;
 import com.ibm.casemgmt.api.context.CaseMgmtContext;
 import com.ibm.casemgmt.api.context.P8ConnectionCache;
 import com.ibm.casemgmt.api.context.SimpleP8ConnectionCache;
@@ -49,6 +47,7 @@ public class DocumentsEventHandler implements EventActionHandler {
 		System.out.println("Inside onEvent method");
 		CaseMgmtContext origCmctx = null;
 		try {
+			int caseCount = 0;
 			P8ConnectionCache connCache = new SimpleP8ConnectionCache();
 			origCmctx = CaseMgmtContext.set(new CaseMgmtContext(new SimpleVWSessionCache(), connCache));
 			ObjectStore os = event.getObjectStore();
@@ -71,9 +70,24 @@ public class DocumentsEventHandler implements EventActionHandler {
 				InputStream stream = ct.accessContentStream();
 				int rowLastCell = 0;
 				HashMap<Integer, String> headers = new HashMap<Integer, String>();
+				HashMap<String, String> propDescMap = new HashMap<String, String>();
 				XSSFWorkbook workbook = new XSSFWorkbook(stream);
 				XSSFSheet sheet = workbook.getSheetAt(0);
+				XSSFSheet sheet1 = workbook.getSheetAt(1);
 				Iterator<Row> rowIterator = sheet.iterator();
+				Iterator<Row> rowIterator1 = sheet1.iterator();
+				while (rowIterator1.hasNext()) {
+					Row row = rowIterator1.next();
+					if (row.getRowNum() > 0) {
+						String key = null, value = null;
+						key = row.getCell(0).getStringCellValue();
+						value = row.getCell(1).getStringCellValue();
+						if (key != null && value != null) {
+							propDescMap.put(key, value);
+						}
+					}
+				}
+				System.out.println("Map: " + propDescMap);
 				String headerValue;
 				if (rowIterator.hasNext()) {
 					Row row = rowIterator.next();
@@ -98,6 +112,7 @@ public class DocumentsEventHandler implements EventActionHandler {
 						}
 						headers.put(colNum++, headerValue);
 					}
+					System.out.println("Headers:" + headers);
 					rowLastCell = row.getLastCellNum();
 					Cell cell1 = row.createCell(rowLastCell, Cell.CELL_TYPE_STRING);
 					if (row.getRowNum() == 0) {
@@ -129,14 +144,16 @@ public class DocumentsEventHandler implements EventActionHandler {
 											String symName = headers.get(colNum).replace("dateField", "");
 											Date date = cell.getDateCellValue();
 											System.out.println("Key" + symName + "Value" + date.toString());
-											caseMgmtProperties.putObjectValue(symName, date);
+											caseMgmtProperties.putObjectValue(propDescMap.get(symName), date);
 											colNum++;
 										} else {
 											colNum++;
 										}
 									} else {
-										System.out.println("Key1" + headers.get(colNum) + "Value1" + getCharValue(cell));
-										caseMgmtProperties.putObjectValue(headers.get(colNum++), getCharValue(cell));
+										System.out
+												.println("Key1" + headers.get(colNum) + "Value1" + getCharValue(cell));
+										caseMgmtProperties.putObjectValue(propDescMap.get(headers.get(colNum++)),
+												getCharValue(cell));
 									}
 								}
 							} catch (Exception e) {
@@ -148,13 +165,14 @@ public class DocumentsEventHandler implements EventActionHandler {
 						pendingCase.save(RefreshMode.REFRESH, null, null);
 						caseId = pendingCase.getId().toString();
 						System.out.println("Case_ID: " + caseId);
-
 					} catch (Exception e) {
 						System.out.println(e);
 						e.printStackTrace();
 					}
 					Cell cell1 = row.createCell(rowLastCell);
 					if (!caseId.isEmpty()) {
+						caseCount+=1;
+						System.out.println("CaseCount: "+caseCount);
 						cell1.setCellValue("Success");
 					} else {
 						cell1.setCellValue("Failure");
