@@ -87,7 +87,6 @@ public class DocumentsEventHandler implements EventActionHandler {
 						}
 					}
 				}
-				System.out.println("Map: " + propDescMap);
 				String headerValue;
 				if (rowIterator.hasNext()) {
 					Row row = rowIterator.next();
@@ -112,7 +111,6 @@ public class DocumentsEventHandler implements EventActionHandler {
 						}
 						headers.put(colNum++, headerValue);
 					}
-					System.out.println("Headers:" + headers);
 					rowLastCell = row.getLastCellNum();
 					Cell cell1 = row.createCell(rowLastCell, Cell.CELL_TYPE_STRING);
 					if (row.getRowNum() == 0) {
@@ -120,9 +118,7 @@ public class DocumentsEventHandler implements EventActionHandler {
 					}
 
 				}
-				System.out.println("CaseType Creation");
 				CaseType caseType = CaseType.fetchInstance(targetOsRef, doc.get_Name());
-				System.out.println("Rights" + caseType.hasInstanceCreationRights());
 				while (rowIterator.hasNext()) {
 					Row row = rowIterator.next();
 					int colNum = 0;
@@ -137,21 +133,16 @@ public class DocumentsEventHandler implements EventActionHandler {
 									colNum++;
 								} else {
 									if (headers.get(colNum).contains("dateField")) {
-										System.out.println("Date Field");
 										if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC
 												&& DateUtil.isCellDateFormatted(cell)) {
-											System.out.println("Date Formatted");
 											String symName = headers.get(colNum).replace("dateField", "");
 											Date date = cell.getDateCellValue();
-											System.out.println("Key" + symName + "Value" + date.toString());
 											caseMgmtProperties.putObjectValue(propDescMap.get(symName), date);
 											colNum++;
 										} else {
 											colNum++;
 										}
 									} else {
-										System.out
-												.println("Key1" + headers.get(colNum) + "Value1" + getCharValue(cell));
 										caseMgmtProperties.putObjectValue(propDescMap.get(headers.get(colNum++)),
 												getCharValue(cell));
 									}
@@ -171,8 +162,8 @@ public class DocumentsEventHandler implements EventActionHandler {
 					}
 					Cell cell1 = row.createCell(rowLastCell);
 					if (!caseId.isEmpty()) {
-						caseCount+=1;
-						System.out.println("CaseCount: "+caseCount);
+						caseCount += 1;
+						System.out.println("CaseCount: " + caseCount);
 						cell1.setCellValue("Success");
 					} else {
 						cell1.setCellValue("Failure");
@@ -182,15 +173,11 @@ public class DocumentsEventHandler implements EventActionHandler {
 				ByteArrayOutputStream bos = null;
 				try {
 					bos = new ByteArrayOutputStream();
-					System.out.println("Before Workbook Write");
 					workbook.write(bos);
-					System.out.println("After Workbook Write");
 					byte[] barray = bos.toByteArray();
 					is = new ByteArrayInputStream(barray);
 					String docTitle = doc.get_Name();
-					System.out.println("Before Folderset");
 					FolderSet folderSet = doc.get_FoldersFiledIn();
-					System.out.println("After Folderset");
 					Folder folder = null;
 					Iterator<Folder> folderSetIterator = folderSet.iterator();
 					if (folderSetIterator.hasNext()) {
@@ -198,14 +185,8 @@ public class DocumentsEventHandler implements EventActionHandler {
 					}
 					String folderPath = folder.get_PathName();
 					folderPath += " Response";
-					System.out.println("Folder path" + folderPath);
 					Folder responseFolder = Factory.Folder.fetchInstance(os, folderPath, null);
-					System.out.println("Before Document Save");
-					Document updateDoc = updateDocument(os, is, doc, docTitle);
-					System.out.println("After Document Save");
-					ReferentialContainmentRelationship rc = responseFolder.file(updateDoc, AutoUniqueName.AUTO_UNIQUE,
-							docTitle, DefineSecurityParentage.DO_NOT_DEFINE_SECURITY_PARENTAGE);
-					rc.save(RefreshMode.REFRESH);
+					updateDocument(os, is, doc, docTitle, responseFolder);
 
 				} catch (Exception e) {
 					System.out.println(e);
@@ -231,7 +212,7 @@ public class DocumentsEventHandler implements EventActionHandler {
 		}
 	}
 
-	private Document updateDocument(ObjectStore os, InputStream is, Document doc, String docTitle) {
+	private void updateDocument(ObjectStore os, InputStream is, Document doc, String docTitle, Folder responseFolder) {
 		// TODO Auto-generated method stub
 		String docClassName = doc.getClassName() + "Response";
 		Document updateDoc = Factory.Document.createInstance(os, docClassName);
@@ -248,7 +229,9 @@ public class DocumentsEventHandler implements EventActionHandler {
 		p.putValue("DocumentTitle", docTitle);
 		updateDoc.setUpdateSequenceNumber(null);
 		updateDoc.save(RefreshMode.REFRESH);
-		return updateDoc;
+		ReferentialContainmentRelationship rc = responseFolder.file(updateDoc, AutoUniqueName.AUTO_UNIQUE, docTitle,
+				DefineSecurityParentage.DO_NOT_DEFINE_SECURITY_PARENTAGE);
+		rc.save(RefreshMode.REFRESH);
 	}
 
 	private static Object getCharValue(Cell cell) {
