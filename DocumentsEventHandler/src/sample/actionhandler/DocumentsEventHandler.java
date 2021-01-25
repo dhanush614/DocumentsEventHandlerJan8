@@ -121,7 +121,7 @@ public class DocumentsEventHandler implements EventActionHandler {
 				CaseType caseType = CaseType.fetchInstance(targetOsRef, doc.get_Name());
 				int rowStart = sheet.getFirstRowNum() + 1;
 				int rowEnd = sheet.getLastRowNum();
-				for (int rowNumber = rowStart; rowNumber < rowEnd; rowNumber++) {
+				for (int rowNumber = rowStart; rowNumber <= rowEnd; rowNumber++) {
 					Row row = sheet.getRow(rowNumber);
 					if (row == null) {
 						break;
