@@ -119,54 +119,60 @@ public class DocumentsEventHandler implements EventActionHandler {
 
 				}
 				CaseType caseType = CaseType.fetchInstance(targetOsRef, doc.get_Name());
-				while (rowIterator.hasNext()) {
-					Row row = rowIterator.next();
-					int colNum = 0;
-					String caseId = "";
-					try {
-						Case pendingCase = Case.createPendingInstance(caseType);
-						CaseMgmtProperties caseMgmtProperties = pendingCase.getProperties();
-						for (int i = 0; i < row.getLastCellNum(); i++) {
-							Cell cell = row.getCell(i, Row.CREATE_NULL_AS_BLANK);
-							try {
-								if (cell == null || cell.getCellType() == Cell.CELL_TYPE_BLANK) {
-									colNum++;
-								} else {
-									if (headers.get(colNum).contains("dateField")) {
-										if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC
-												&& DateUtil.isCellDateFormatted(cell)) {
-											String symName = headers.get(colNum).replace("dateField", "");
-											Date date = cell.getDateCellValue();
-											caseMgmtProperties.putObjectValue(propDescMap.get(symName), date);
-											colNum++;
-										} else {
-											colNum++;
-										}
-									} else {
-										caseMgmtProperties.putObjectValue(propDescMap.get(headers.get(colNum++)),
-												getCharValue(cell));
-									}
-								}
-							} catch (Exception e) {
-								System.out.println(e);
-								e.printStackTrace();
-							}
-						}
-						System.out.println("Case Creation");
-						pendingCase.save(RefreshMode.REFRESH, null, null);
-						caseId = pendingCase.getId().toString();
-						System.out.println("Case_ID: " + caseId);
-					} catch (Exception e) {
-						System.out.println(e);
-						e.printStackTrace();
-					}
-					Cell cell1 = row.createCell(rowLastCell);
-					if (!caseId.isEmpty()) {
-						caseCount += 1;
-						System.out.println("CaseCount: " + caseCount);
-						cell1.setCellValue("Success");
+				int rowStart = sheet.getFirstRowNum() + 1;
+				int rowEnd = sheet.getLastRowNum();
+				for (int rowNumber = rowStart; rowNumber < rowEnd; rowNumber++) {
+					Row row = sheet.getRow(rowNumber);
+					if (row == null) {
+						break;
 					} else {
-						cell1.setCellValue("Failure");
+						int colNum = 0;
+						String caseId = "";
+						try {
+							Case pendingCase = Case.createPendingInstance(caseType);
+							CaseMgmtProperties caseMgmtProperties = pendingCase.getProperties();
+							for (int i = 0; i < row.getLastCellNum(); i++) {
+								Cell cell = row.getCell(i, Row.CREATE_NULL_AS_BLANK);
+								try {
+									if (cell == null || cell.getCellType() == Cell.CELL_TYPE_BLANK) {
+										colNum++;
+									} else {
+										if (headers.get(colNum).contains("dateField")) {
+											if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC
+													&& DateUtil.isCellDateFormatted(cell)) {
+												String symName = headers.get(colNum).replace("dateField", "");
+												Date date = cell.getDateCellValue();
+												caseMgmtProperties.putObjectValue(propDescMap.get(symName), date);
+												colNum++;
+											} else {
+												colNum++;
+											}
+										} else {
+											caseMgmtProperties.putObjectValue(propDescMap.get(headers.get(colNum++)),
+													getCharValue(cell));
+										}
+									}
+								} catch (Exception e) {
+									System.out.println(e);
+									e.printStackTrace();
+								}
+							}
+							System.out.println("Case Creation");
+							pendingCase.save(RefreshMode.REFRESH, null, null);
+							caseId = pendingCase.getId().toString();
+							System.out.println("Case_ID: " + caseId);
+							Cell cell1 = row.createCell(rowLastCell);
+							if (!caseId.isEmpty()) {
+								caseCount += 1;
+								System.out.println("CaseCount: " + caseCount);
+								cell1.setCellValue("Success");
+							} else {
+								cell1.setCellValue("Failure");
+							}
+						} catch (Exception e) {
+							System.out.println(e);
+							e.printStackTrace();
+						}
 					}
 				}
 				InputStream is = null;
